@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>영이의 썹삼도전기 - 8-bit Retro Edition</title>
+    <style>
+        /* Import Google Font for 8-bit retro look */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Press Start 2P', cursive;
+            touch-action: none;
+            color: #fff;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        canvas {
+            display: block;
+            background-color: #55AAFF; /* Base sky color */
+            image-rendering: pixelated; /* Ensures crisp pixel art scaling */
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border: 4px solid #fff;
+        }
+        
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        /* 8-bit Gauges */
+        .gauge-container {
+            position: absolute;
+            top: 20px;
+            width: 250px;
+            height: 24px;
+            background-color: #000;
+            border: 4px solid #fff;
+            padding: 2px;
+        }
+        #energy-container {
+            left: 20px;
+        }
+        #hydration-container {
+            left: 20px;
+            top: 80px;
+        }
+        .gauge-bar {
+            height: 100%;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+        #energy-bar {
+            background-color: #ff5500;
+        }
+        #hydration-bar {
+            background-color: #0088ff;
+        }
+        .gauge-label {
+            position: absolute;
+            top: -18px;
+            left: 0;
+            color: #fff;
+            font-size: 12px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* Pace Display */
+        #pace-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 20px;
+            color: #ffff00;
+            text-shadow: 3px 3px 0 #000;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border: 4px solid #fff;
+        }
+
+        /* 8-bit Buttons */
+        .btn {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #d32f2f;
+            color: #fff;
+            border: 4px solid #fff;
+            padding: 20px 30px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: inset -4px -4px 0px 0px rgba(0,0,0,0.5);
+            text-transform: uppercase;
+            pointer-events: auto;
+        }
+        .btn:active {
+            box-shadow: inset 4px 4px 0px 0px rgba(0,0,0,0.5);
+            transform: translateY(2px);
+            background-color: #b71c1c;
+        }
+
+        /* Mobile Controls */
+        .mobile-btn {
+            position: absolute;
+            bottom: 30px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: rgba(200, 200, 200, 0.5);
+            border: 6px solid #fff;
+            color: #000;
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            user-select: none;
+            box-shadow: inset -5px -5px 0px rgba(0,0,0,0.3), 0 5px 0 #000;
+        }
+        .mobile-btn:active {
+            transform: translateY(5px);
+            box-shadow: inset 5px 5px 0px rgba(0,0,0,0.3), 0 0 0 #000;
+            background-color: rgba(150, 150, 150, 0.7);
+        }
+        #btn-slide {
+            left: 30px;
+        }
+        #btn-jump {
+            right: 30px;
+            background-color: rgba(255, 50, 50, 0.5);
+        }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;
+        }
+        .hidden {
+            display: none !important;
+        }
+        h1 {
+            font-size: 40px;
+            color: #ffff00;
+            text-shadow: 4px 4px 0 #ff0000;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        h2 {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #fff;
+        }
+        .instruction {
+            margin: 30px 0;
+            font-size: 14px;
+            line-height: 2;
+            color: #ccc;
+        }
+        .highlight { color: #55ff55; }
+        .danger { color: #ff5555; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    
+    <div id="ui-layer">
+        <!-- In-game UI -->
+        <div id="ingame-ui" class="hidden">
+            <div id="energy-container" class="gauge-container">
+                <span class="gauge-label">ENG</span>
+                <div id="energy-bar" class="gauge-bar"></div>
+            </div>
+            <div id="hydration-container" class="gauge-container">
+                <span class="gauge-label">H2O</span>
+                <div id="hydration-bar" class="gauge-bar"></div>
+            </div>
+            
+            <div id="pace-display">00'00"</div>
+            
+            <div id="btn-slide" class="mobile-btn">DOWN</div>
+            <div id="btn-jump" class="mobile-btn">A/JUMP</div>
+        </div>
+        
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <h1>JEJU RUN<br><small style="font-size:20px; color:#fff; text-shadow:none;">8-BIT EDITION</small></h1>
+            <div class="instruction">
+                <p>CONTROLS</p>
+                <p>[SPACE] = JUMP / <span class="highlight">DOUBLE JUMP</span></p>
+                <p>[DOWN] = SLIDE</p>
+                <br>
+                <p>GET: GEL/WATER = LIFE+</p>
+                <p>AVOID: STATUE/WALL (<span class="highlight">JUMP</span>)</p>
+                <p>AVOID: BIRD (<span class="danger">SLIDE</span>)</p>
+            </div>
+            <button id="btn-start-game" class="btn">START GAME</button>
+        </div>
+        
+        <!-- Result Screen -->
+        <div id="result-screen" class="screen hidden">
+            <h1 id="result-title">GAME OVER</h1>
+            <h2>FINAL PACE:</h2>
+            <div id="result-pace" style="font-size: 48px; color: #ffff00; margin-bottom: 30px;">5'50"</div>
+            <div id="result-reason" style="font-size:16px; margin-bottom: 30px; color:#ff5555;">OUT OF ENERGY</div>
+            <button id="btn-restart" class="btn">TRY AGAIN</button>
+        </div>
+
+        <!-- Stage Clear Screen -->
+        <div id="stage-clear-screen" class="screen hidden">
+            <h1 id="stage-clear-title" style="color:#55ff55; text-shadow: 4px 4px 0 #008800;">STAGE CLEAR</h1>
+            <h2>CURRENT PACE:</h2>
+            <div id="stage-clear-pace" style="font-size: 48px; color: #ffff00; margin-bottom: 30px;">5'50"</div>
+            <button id="btn-next-stage" class="btn">NEXT LEVEL</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * 영이의 썹삼도전기 - 8-Bit Retro Edition Engine
+ */
+
+// 1. Constants
+const CANVAS_WIDTH = 960;
+const CANVAS_HEIGHT = 540;
+const FLOOR_Y = 460;
+const GRAVITY = 1.2;
+
+// Pace progression stages
+const PACES = [
+    { str: "5'50\"", speed: 6, gapScale: 1.0,  duration: 2000 },
+    { str: "5'30\"", speed: 7, gapScale: 0.95, duration: 2500 },
+    { str: "5'00\"", speed: 8, gapScale: 0.9,  duration: 3000 },
+    { str: "4'40\"", speed: 9, gapScale: 0.85, duration: 3500 },
+    { str: "4'30\"", speed: 10, gapScale: 0.8,  duration: 4000 },
+    { str: "4'20\"", speed: 11, gapScale: 0.75, duration: 4500 },
+    { str: "4'00\"", speed: 12, gapScale: 0.7,  duration: 5000 },
+    { str: "3'90\"", speed: 14, gapScale: 0.6,  duration: 6000 } // SUB-3
+];
+
+const ENTITY_TYPES = {
+    ITEM_GEL: 0,
+    ITEM_WATER: 1,
+    OBS_HAREUBANG: 2, // Needs Jump
+    OBS_WALL: 3,      // Needs Jump
+    OBS_BIRD: 4       // Needs Slide
+};
+
+// 2. Global State
+const state = {
+    screen: 'start', // 'start', 'playing', 'stage_clear', 'result'
+    paceLevel: 0,
+    stageDistance: 0, // Distance traveled in current stage
+    
+    player: {
+        x: 100,
+        y: FLOOR_Y,
+        w: 90,
+        h: 120, // tall 8-bit sprite
+        vy: 0,
+        isJumping: false,
+        canDoubleJump: false,
+        isSliding: false,
+        animState: 'idle'
+    },
+    
+    energy: 100,
+    hydration: 100,
+    blinkTimer: 0,
+    
+    entities: [],
+    
+    bgScroll: [0, 0, 0],
+    
+    inputJump: false,
+    inputSlide: false,
+    inputJumpPressed: false
+};
+
+// 3. Asset Management (Individual Files)
+const assets = {};
+const assetNames = [
+    'char_idle', 'char_run', 'char_jump', 'char_djump', 'char_slide', 'char_fall',
+    'bg_sky', 'bg_mid', 'bg_front',
+    'item_gel', 'item_water', 'obs_hareubang', 'obs_wall', 'obs_bird'
+];
+
+let loadedCount = 0;
+assetNames.forEach(name => {
+    assets[name] = new Image();
+    assets[name].src = `assets/${name}.png`;
+    assets[name].onload = () => { loadedCount++; };
+});
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+// Critical for 8-bit look
+ctx.imageSmoothingEnabled = false;
+
+// UI Refs
+const uiIngame = document.getElementById('ingame-ui');
+const uiStart = document.getElementById('start-screen');
+const uiResult = document.getElementById('result-screen');
+const uiStageClear = document.getElementById('stage-clear-screen');
+const barEnergy = document.getElementById('energy-bar');
+const barHydration = document.getElementById('hydration-bar');
+const txtPace = document.getElementById('pace-display');
+const txtResultPace = document.getElementById('result-pace');
+const txtResultReason = document.getElementById('result-reason');
+
+// 4. Input Handling
+document.addEventListener('keydown', (e) => {
+    if (state.screen !== 'playing') return;
+    if (e.code === 'Space' || e.code === 'ArrowUp') state.inputJump = true;
+    if (e.code === 'ArrowDown') state.inputSlide = true;
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+        state.inputJump = false;
+        state.inputJumpPressed = false;
+    }
+    if (e.code === 'ArrowDown') state.inputSlide = false;
+});
+
+// Mobile Buttons
+const btnJump = document.getElementById('btn-jump');
+const btnSlide = document.getElementById('btn-slide');
+
+const handleJumpDown = (e) => { e.preventDefault(); state.inputJump = true; };
+const handleJumpUp = (e) => { e.preventDefault(); state.inputJump = false; state.inputJumpPressed = false; };
+const handleSlideDown = (e) => { e.preventDefault(); state.inputSlide = true; };
+const handleSlideUp = (e) => { e.preventDefault(); state.inputSlide = false; };
+
+btnJump.addEventListener('mousedown', handleJumpDown); btnJump.addEventListener('touchstart', handleJumpDown);
+btnJump.addEventListener('mouseup', handleJumpUp);     btnJump.addEventListener('touchend', handleJumpUp);
+btnSlide.addEventListener('mousedown', handleSlideDown); btnSlide.addEventListener('touchstart', handleSlideDown);
+btnSlide.addEventListener('mouseup', handleSlideUp);     btnSlide.addEventListener('touchend', handleSlideUp);
+
+// 5. Game Logic
+function resetGame() {
+    state.paceLevel = 0;
+    state.energy = 100;
+    state.hydration = 100;
+    startStage();
+}
+
+function startStage() {
+    state.screen = 'playing';
+    state.stageDistance = 0;
+    state.player.y = FLOOR_Y;
+    state.player.vy = 0;
+    state.player.isJumping = false;
+    state.player.isSliding = false;
+    state.entities = [];
+    state.blinkTimer = 0;
+    
+    uiStart.classList.add('hidden');
+    uiResult.classList.add('hidden');
+    uiStageClear.classList.add('hidden');
+    uiIngame.classList.remove('hidden');
+    
+    txtPace.innerText = "PACE:" + PACES[state.paceLevel].str;
+    state.player.animState = 'run';
+    resizeCanvas();
+}
+
+function endGame(reason) {
+    state.screen = 'result';
+    state.player.animState = 'fall';
+    uiIngame.classList.add('hidden');
+    uiResult.classList.remove('hidden');
+    
+    if (state.paceLevel >= PACES.length - 1 && state.stageDistance >= PACES[state.paceLevel].duration) {
+        document.getElementById('result-title').innerText = "SUB-3 CLEAR!";
+        document.getElementById('result-title').style.color = "#55ff55";
+        txtResultReason.innerText = "YOU ARE A LEGEND!";
+    } else {
+        document.getElementById('result-title').innerText = "GAME OVER";
+        document.getElementById('result-title').style.color = "#ff5555";
+        txtResultReason.innerText = reason;
+    }
+    txtResultPace.innerText = PACES[state.paceLevel].str;
+}
+
+document.getElementById('btn-start-game').addEventListener('click', resetGame);
+document.getElementById('btn-restart').addEventListener('click', resetGame);
+
+document.getElementById('btn-next-stage').addEventListener('click', () => {
+    state.paceLevel++;
+    startStage();
+});
+
+function spawnEntity() {
+    const p = PACES[state.paceLevel];
+    const rand = Math.random();
+    
+    let subType;
+    let yPos = FLOOR_Y;
+    let width = 60;
+    let height = 80;
+    
+    if (rand < 0.4) {
+        // Drop an item
+        subType = Math.random() < 0.5 ? ENTITY_TYPES.ITEM_GEL : ENTITY_TYPES.ITEM_WATER;
+        width = 40; height = 40;
+        yPos = Math.random() < 0.5 ? FLOOR_Y : FLOOR_Y - 100; // Low or High
+    } else {
+        // Drop Obstacle
+        const obRand = Math.random();
+        if (obRand < 0.4) {
+            subType = ENTITY_TYPES.OBS_HAREUBANG;
+            width = 60; height = 100;
+        } else if (obRand < 0.7) {
+            subType = ENTITY_TYPES.OBS_WALL;
+            width = 70; height = 70;
+        } else {
+            subType = ENTITY_TYPES.OBS_BIRD;
+            width = 60; height = 50;
+            yPos = FLOOR_Y - 110; // High up requiring slide
+        }
+    }
+    
+    state.entities.push({
+        subType,
+        x: CANVAS_WIDTH + 50,
+        y: yPos,
+        w: width,
+        h: height,
+        active: true
+    });
+}
+
+function updatePhysics() {
+    const p = state.player;
+    
+    if (state.screen !== 'playing') return;
+
+    // Sliding
+    if (state.inputSlide && !p.isJumping) {
+        if (!p.isSliding) {
+            p.h = 60; 
+            p.y = FLOOR_Y + 60;
+            p.isSliding = true;
+            p.animState = 'slide';
+        }
+    } else {
+        if (p.isSliding) {
+            p.h = 120;
+            p.y = p.y - 60;
+            p.isSliding = false;
+        }
+    }
+
+    // Jumping
+    if (state.inputJump && !state.inputJumpPressed) {
+        state.inputJumpPressed = true;
+        if (!p.isJumping && !p.isSliding) {
+            p.vy = -18;
+            p.isJumping = true;
+            p.canDoubleJump = true;
+            p.animState = 'jump';
+        } else if (p.isJumping && p.canDoubleJump) {
+            p.vy = -15; // Double jump boost
+            p.canDoubleJump = false;
+            p.animState = 'char_djump';
+        }
+    }
+
+    // Gravity
+    p.vy += GRAVITY;
+    p.y += p.vy;
+    
+    // Floor Collision
+    if (p.y >= FLOOR_Y && !p.isSliding) {
+        p.y = FLOOR_Y;
+        p.vy = 0;
+        p.isJumping = false;
+        p.canDoubleJump = false;
+        
+        if (!state.inputSlide && p.animState !== 'fall') {
+            p.animState = 'run';
+        }
+    } else if (p.isSliding && p.y >= FLOOR_Y + 60) {
+        p.y = FLOOR_Y + 60;
+        p.vy = 0;
+    }
+}
+
+function checkCollisions() {
+    if (state.screen !== 'playing') return;
+    
+    const p = state.player;
+    const playerRect = {
+        left: p.x + 10, right: p.x + p.w - 10,
+        top: p.y - p.h + 10, bottom: p.y
+    };
+
+    for (let e of state.entities) {
+        if (!e.active) continue;
+        
+        let eHitbox = {
+            left: e.x + 10, right: e.x + e.w - 10,
+            top: e.y - e.h + 10, bottom: e.y
+        };
+
+        if (e.subType === ENTITY_TYPES.OBS_BIRD) {
+            eHitbox.bottom = e.y - 10;
+        }
+
+        const collision = 
+            playerRect.left < eHitbox.right &&
+            playerRect.right > eHitbox.left &&
+            playerRect.top < eHitbox.bottom &&
+            playerRect.bottom > eHitbox.top;
+
+        if (collision) {
+            if (e.subType === ENTITY_TYPES.ITEM_GEL) {
+                state.energy = Math.min(100, state.energy + 20);
+                e.active = false;
+            } else if (e.subType === ENTITY_TYPES.ITEM_WATER) {
+                state.hydration = Math.min(100, state.hydration + 20);
+                e.active = false;
+            } else {
+                // Obstacle Hit
+                state.energy -= 40;
+                state.hydration -= 40;
+                e.active = false;
+                state.blinkTimer = 30; // IFrames / Damage flash
+            }
+        }
+    }
+}
+
+function update() {
+    if (state.screen !== 'playing') return;
+    
+    const pInfo = PACES[state.paceLevel];
+    const speed = pInfo.speed;
+
+    // Drain gauges
+    state.energy -= 0.08;
+    state.hydration -= 0.08;
+    
+    if (state.energy <= 0) { endGame("OUT OF ENERGY"); return; }
+    if (state.hydration <= 0) { endGame("OUT OF WATER"); return; }
+    
+    // Distance tracking
+    state.stageDistance += speed;
+    
+    // Stage clear check
+    if (state.stageDistance >= pInfo.duration) {
+        if (state.paceLevel < PACES.length - 1) {
+            state.screen = 'stage_clear';
+            document.getElementById('stage-clear-pace').innerText = PACES[state.paceLevel].str;
+            uiIngame.classList.add('hidden');
+            uiStageClear.classList.remove('hidden');
+        } else {
+            endGame("FINISHED");
+        }
+        return;
+    }
+
+    // Scroll Backgrounds (Parallax)
+    state.bgScroll[0] -= speed * 0.1; 
+    state.bgScroll[1] -= speed * 0.4; 
+    state.bgScroll[2] -= speed;       
+    for(let i=0; i<3; i++) {
+        if (state.bgScroll[i] <= -CANVAS_WIDTH) state.bgScroll[i] = 0;
+    }
+
+    // Move Entities
+    for (let e of state.entities) {
+        e.x -= speed;
+    }
+    state.entities = state.entities.filter(e => e.x + e.w > -50);
+    
+    // Spawning logic
+    const lastEntity = state.entities[state.entities.length - 1];
+    const minGap = 400 * pInfo.gapScale;
+    
+    if (!lastEntity || (CANVAS_WIDTH - lastEntity.x) > minGap) {
+        if (Math.random() < 0.04) spawnEntity();
+    }
+
+    updatePhysics();
+    checkCollisions();
+    
+    // Damage blink
+    if (state.blinkTimer > 0) state.blinkTimer--;
+    
+    // Update UI
+    barEnergy.style.width = Math.max(0, state.energy) + "%";
+    barHydration.style.width = Math.max(0, state.hydration) + "%";
+    barEnergy.style.backgroundColor = state.energy < 25 ? "#ff0000" : "#ff5500";
+    barHydration.style.backgroundColor = state.hydration < 25 ? "#ff0000" : "#0088ff";
+}
+
+// 6. Graphics Rendering (8-bit style)
+function drawBackground() {
+    ctx.fillStyle = "#55AAFF";
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); // Sky base
+    
+    if (loadedCount < assetNames.length) return;
+    
+    const layerH = CANVAS_HEIGHT / 3;
+    
+    // Sky
+    ctx.drawImage(assets.bg_sky, state.bgScroll[0], 0, CANVAS_WIDTH, layerH);
+    ctx.drawImage(assets.bg_sky, state.bgScroll[0] + CANVAS_WIDTH, 0, CANVAS_WIDTH, layerH);
+    
+    // Mid (Trees)
+    ctx.drawImage(assets.bg_mid, state.bgScroll[1], layerH, CANVAS_WIDTH, layerH);
+    ctx.drawImage(assets.bg_mid, state.bgScroll[1] + CANVAS_WIDTH, layerH, CANVAS_WIDTH, layerH);
+    
+    // Front (Floor)
+    const floorH = layerH + (CANVAS_HEIGHT-FLOOR_Y);
+    ctx.drawImage(assets.bg_front, state.bgScroll[2], FLOOR_Y - layerH, CANVAS_WIDTH, floorH);
+    ctx.drawImage(assets.bg_front, state.bgScroll[2] + CANVAS_WIDTH, FLOOR_Y - layerH, CANVAS_WIDTH, floorH);
+    
+    // Retro Floor Line
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, FLOOR_Y, CANVAS_WIDTH, 4);
+    ctx.fillStyle = "#333";
+    ctx.fillRect(0, FLOOR_Y+4, CANVAS_WIDTH, CANVAS_HEIGHT - FLOOR_Y - 4);
+}
+
+function drawPlayer() {
+    const p = state.player;
+    if (state.blinkTimer > 0 && Math.floor(Date.now() / 100) % 2 === 0) return; // Blink on damage
+    
+    if (loadedCount < assetNames.length) return;
+    
+    // Wobble for retro run cycle
+    let bobY = 0;
+    if (p.animState === 'run' && state.screen === 'playing') {
+        bobY = Math.sin(Date.now() / 80) > 0 ? -4 : 0;
+    }
+    
+    let imgName = 'char_idle';
+    if (p.animState === 'run') imgName = 'char_run';
+    else if (p.animState === 'jump') imgName = 'char_jump';
+    else if (p.animState === 'char_djump') imgName = 'char_djump';
+    else if (p.animState === 'slide') imgName = 'char_slide';
+    else if (p.animState === 'fall') imgName = 'char_fall';
+    
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(assets[imgName], p.x, p.y - p.h + bobY, p.w, p.h);
+}
+
+function drawEntities() {
+    if (loadedCount < assetNames.length) return;
+    
+    for (let e of state.entities) {
+        if (!e.active) continue;
+        
+        let imgName = '';
+        let bobY = 0;
+        
+        switch(e.subType) {
+            case ENTITY_TYPES.ITEM_GEL: imgName = 'item_gel'; bobY = Math.sin((Date.now() + e.x)/150)*8; break;
+            case ENTITY_TYPES.ITEM_WATER: imgName = 'item_water'; bobY = Math.sin((Date.now() + e.x)/150)*8; break;
+            case ENTITY_TYPES.OBS_HAREUBANG: imgName = 'obs_hareubang'; break;
+            case ENTITY_TYPES.OBS_WALL: imgName = 'obs_wall'; break;
+            case ENTITY_TYPES.OBS_BIRD: 
+                imgName = 'obs_bird'; 
+                bobY = Math.sin((Date.now() + e.x)/100)*15; // swooping motion
+                break;
+        }
+        
+        ctx.drawImage(assets[imgName], e.x, e.y - e.h + bobY, e.w, e.h);
+    }
+}
+
+function processLoading() {
+    if (loadedCount < assetNames.length) {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = "#fff";
+        ctx.font = "30px 'Press Start 2P'";
+        ctx.fillText(`LOADING... ${loadedCount}/${assetNames.length}`, CANVAS_WIDTH/2 - 150, CANVAS_HEIGHT/2);
+    }
+}
+
+function render() {
+    ctx.imageSmoothingEnabled = false; // ensure crispy pixels
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    if (loadedCount < assetNames.length) {
+        processLoading();
+        return;
+    }
+    
+    drawBackground();
+    drawEntities();
+    drawPlayer();
+}
+
+// 7. Loop Loop Loop
+let lastTime = performance.now();
+function gameLoop(time) {
+    update();
+    render();
+    lastTime = time;
+    requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+// Responsive Setup
+function resizeCanvas() {
+    const container = document.getElementById('game-container');
+    const vw = container.clientWidth;
+    const vh = container.clientHeight;
+    const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
+    const windowAspect = vw / vh;
+    
+    if (windowAspect > aspect) {
+        canvas.style.height = '100%';
+        canvas.style.width = 'auto';
+    } else {
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+</script>
+</body>
+</html>
