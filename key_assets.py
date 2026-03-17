@@ -50,20 +50,20 @@ os.makedirs(assets_dir, exist_ok=True)
 
 # Map prefix to final filename
 asset_map = {
-    "retro_char_idle": "char_idle.png",
-    "retro_char_run": "char_run.png",
-    "retro_char_jump": "char_jump.png",
-    "retro_char_slide": "char_slide.png",
-    "retro_char_fall": "char_fall.png",
-    "retro_char_doublejump": "char_djump.png",
-    "retro_obs_hareubang": "obs_hareubang.png",
-    "retro_obs_wall": "obs_wall.png",
-    "retro_obs_bird": "obs_bird.png",
-    "retro_item_gel": "item_gel.png",
-    "retro_item_water": "item_water.png",
-    "retro_bg_sky": "bg_sky.png",
-    "retro_bg_mid": "bg_mid.png",
-    "retro_bg_front": "bg_front.png"
+    "cr_char_idle": "char_idle.png",
+    "cr_char_run": "char_run.png",
+    "cr_char_jump": "char_jump.png",
+    "cr_char_slide": "char_slide.png",
+    "cr_char_fall": "char_fall.png",
+    "cr_char_doublejump": "char_djump.png",
+    "cr_obs_hareubang": "obs_hareubang.png",
+    "cr_obs_wall": "obs_wall.png",
+    "cr_obs_bird": "obs_bird.png",
+    "cr_item_gel": "item_gel.png",
+    "cr_item_water": "item_water.png",
+    "cr_bg_sky": "bg_sky.png",
+    "cr_bg_mid": "bg_mid.png",
+    "cr_bg_front": "bg_front.png"
 }
 
 for prefix, final_name in asset_map.items():
